@@ -13,6 +13,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"strconv"
@@ -162,12 +163,14 @@ func (mc *mysqlConn) error() error {
 }
 
 func (mc *mysqlConn) Prepare(query string) (driver.Stmt, error) {
+	fmt.Printf("mc.Prepare statement: query: " + query)
 	if mc.closed.IsSet() {
 		errLog.Print(ErrInvalidConn)
 		return nil, driver.ErrBadConn
 	}
 	// Send command
 	err := mc.writeCommandPacketStr(comStmtPrepare, query)
+	fmt.Printf("mc.writeCommandPacketStr() finished: query: " + query)
 	if err != nil {
 		// STMT_PREPARE is safe to retry.  So we can return ErrBadConn here.
 		errLog.Print(err)
@@ -180,6 +183,7 @@ func (mc *mysqlConn) Prepare(query string) (driver.Stmt, error) {
 
 	// Read Result
 	columnCount, err := stmt.readPrepareResultPacket()
+	fmt.Printf("stmt.readPrepareResultPacket() finished: query: " + query)
 	if err == nil {
 		if stmt.paramCount > 0 {
 			if err = mc.readUntilEOF(); err != nil {
@@ -191,7 +195,7 @@ func (mc *mysqlConn) Prepare(query string) (driver.Stmt, error) {
 			err = mc.readUntilEOF()
 		}
 	}
-
+	fmt.Printf("mc.Prepare statement finished: query: " + query)
 	return stmt, err
 }
 
@@ -526,6 +530,7 @@ func (mc *mysqlConn) ExecContext(ctx context.Context, query string, args []drive
 }
 
 func (mc *mysqlConn) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
+	fmt.Println("PrepareContext starts. query: " + query)
 	if err := mc.watchCancel(ctx); err != nil {
 		return nil, err
 	}
@@ -542,6 +547,7 @@ func (mc *mysqlConn) PrepareContext(ctx context.Context, query string) (driver.S
 		stmt.Close()
 		return nil, ctx.Err()
 	}
+	fmt.Println("PrepareContext finished. query: " + query)
 	return stmt, nil
 }
 
